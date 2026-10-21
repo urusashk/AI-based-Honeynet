@@ -197,4 +197,45 @@ class ApiService {
   }
 }
 
+/**
+ * Fetch Cowrie logs from /logs/cowrie.json (proxied to http://localhost:3001/cowrie.json),
+ * parse lines safely (skipping invalid/malformed lines), and extract the required fields:
+ * eventid, src_ip, username, password, input, timestamp.
+ */
+export async function fetchCowrieLogs() {
+  const response = await fetch('/logs/cowrie.json', {
+    headers: { 'Cache-Control': 'no-cache' }
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to fetch cowrie logs: ${response.status} ${response.statusText}`);
+  }
+
+  const text = await response.text();
+  const lines = text.split(/\r?\n/);
+  const events = [];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    try {
+      const obj = JSON.parse(trimmed);
+      if (obj && typeof obj === 'object') {
+        events.push({
+          eventid: obj.eventid || '',
+          src_ip: obj.src_ip || '',
+          username: obj.username || '',
+          password: obj.password || '',
+          input: obj.input || '',
+          timestamp: obj.timestamp || ''
+        });
+      }
+    } catch {
+      // Skip bad lines safely
+    }
+  }
+
+  return events;
+}
+
 export const apiService = new ApiService();
+

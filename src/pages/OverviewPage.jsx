@@ -35,11 +35,11 @@ export default function OverviewPage() {
   const { events, honeypots, attackers, setSelectedEventId } = useHoneynet();
   const navigate = useNavigate();
 
-  // Summary Metrics
-  const totalEvents = 1447 + (events.length - 8);
-  const uniqueAttackerCount = attackers.length + 27; // simulated network population
-  const activeHoneypotsCount = honeypots.filter((h) => h.status === 'active').length;
-  const criticalThreatsCount = events.filter((e) => e.severity === 'Critical').length + 190;
+  // Summary Metrics from live events
+  const totalEvents = events.length;
+  const uniqueAttackerCount = new Set(events.map((e) => e.src_ip || e.sourceIp).filter(Boolean)).size || attackers.length;
+  const activeHoneypotsCount = honeypots.filter((h) => h.status === 'active').length || 1;
+  const criticalThreatsCount = events.filter((e) => e.severity === 'Critical').length;
 
   const statCards = [
     {

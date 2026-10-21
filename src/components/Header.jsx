@@ -22,7 +22,7 @@ export default function Header({ title, subtitle }) {
         <h1 className="text-base font-bold text-slate-100 tracking-tight flex items-center gap-2">
           {title}
           <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-            DEMO MODE (RFC 5737 IPs)
+            LIVE HONEYPOT (Cowrie)
           </span>
         </h1>
         {subtitle && (

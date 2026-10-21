@@ -21,13 +21,13 @@ export default function AIThreatAnalysisPage() {
   const { events, selectedEventId, setSelectedEventId } = useHoneynet();
 
   // Find currently selected event or default to first
-  const currentEvent = events.find((e) => e.id === selectedEventId) || events[0];
-  const analysis = currentEvent.aiAnalysis;
+  const currentEvent = events.find((e) => e.id === selectedEventId) || events[0] || null;
+  const analysis = currentEvent?.aiAnalysis;
 
   // Filter related events from the same simulated attacker
-  const relatedEvents = events.filter(
-    (e) => e.sourceIp === currentEvent.sourceIp && e.id !== currentEvent.id
-  );
+  const relatedEvents = currentEvent
+    ? events.filter((e) => e.sourceIp === currentEvent.sourceIp && e.id !== currentEvent.id)
+    : [];
 
   return (
     <div className="flex-1 flex flex-col min-h-screen">
@@ -50,23 +50,29 @@ export default function AIThreatAnalysisPage() {
           </div>
         </div>
 
-        {/* Event Selector Pill Bar */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2">
-          <span className="text-xs font-mono text-slate-400 shrink-0">Select Event:</span>
-          {events.slice(0, 7).map((evt) => (
-            <button
-              key={evt.id}
-              onClick={() => setSelectedEventId(evt.id)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all shrink-0 border ${
-                evt.id === currentEvent.id
-                  ? 'bg-purple-500/20 text-purple-300 border-purple-500/50 shadow-sm font-bold'
-                  : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
-              }`}
-            >
-              {evt.id} ({evt.attackType.split(' ')[0]})
-            </button>
-          ))}
-        </div>
+        {!currentEvent ? (
+          <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-12 text-center text-slate-400 font-mono text-xs">
+            Waiting for Cowrie log events from http://localhost:3001/cowrie.json...
+          </div>
+        ) : (
+          <>
+            {/* Event Selector Pill Bar */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-2">
+              <span className="text-xs font-mono text-slate-400 shrink-0">Select Event:</span>
+              {events.slice(0, 7).map((evt) => (
+                <button
+                  key={evt.id}
+                  onClick={() => setSelectedEventId(evt.id)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all shrink-0 border ${
+                    evt.id === currentEvent.id
+                      ? 'bg-purple-500/20 text-purple-300 border-purple-500/50 shadow-sm font-bold'
+                      : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
+                  }`}
+                >
+                  {evt.id} ({evt.attackType?.split(' ')[0] || 'Event'})
+                </button>
+              ))}
+            </div>
 
         {/* AI Scorecard & Classification Header */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -270,6 +276,8 @@ export default function AIThreatAnalysisPage() {
             </div>
           )}
         </div>
+        </>
+        )}
       </div>
     </div>
   );

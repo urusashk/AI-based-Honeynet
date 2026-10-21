@@ -4,80 +4,81 @@ import { useHoneynet } from '../context/HoneynetContext';
 import {
   Search,
   Filter,
-  Play,
-  Square,
   ArrowUpDown,
   ChevronLeft,
   ChevronRight,
-  ShieldAlert,
   Terminal,
   Activity,
   Radio,
   Clock,
   Layers,
-  Info,
-  ExternalLink,
-  SlidersHorizontal,
-  X
+  ShieldAlert,
+  ShieldCheck,
+  UserX,
+  Users,
+  X,
+  Lock,
+  Key
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export default function LiveAttacksPage() {
   const {
     events,
-    isDemoStreaming,
-    setIsDemoStreaming,
-    streamSpeed,
-    setStreamSpeed,
+    totalEvents,
+    failedLogins,
+    successfulLogins,
+    uniqueAttackers,
     setSelectedEventId
   } = useHoneynet();
   const navigate = useNavigate();
 
   // Filters & Search State
   const [searchQuery, setSearchQuery] = useState('');
-  const [severityFilter, setSeverityFilter] = useState('All');
-  const [attackTypeFilter, setAttackTypeFilter] = useState('All');
+  const [eventIdFilter, setEventIdFilter] = useState('All');
   const [sortField, setSortField] = useState('timestamp');
-  const [sortAsc, setSortAsc] = useState(false);
+  const [sortAsc, setSortAsc] = useState(false); // default: newest first
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 8;
+  const itemsPerPage = 12;
 
-  // Selected session for bottom/side detail drawer
-  const [activeSession, setActiveSession] = useState(events[0]);
+  // Selected event for details drawer
+  const [activeSession, setActiveSession] = useState(null);
 
-  // Unique Attack Types for Filter dropdown
-  const attackTypes = ['All', 'SQL Injection', 'SSH Brute Force', 'Command Injection', 'SYN Port Sweep', 'Directory Traversal', 'DB Brute Force'];
-
-  // Filtered & Sorted Events
+  // Filtered & Sorted Events (newest first by default)
   const filteredEvents = useMemo(() => {
-    return events
+    return [...events]
       .filter((evt) => {
-        if (severityFilter !== 'All' && evt.severity !== severityFilter) return false;
-        if (attackTypeFilter !== 'All' && evt.attackType !== attackTypeFilter) return false;
+        if (eventIdFilter !== 'All') {
+          if (eventIdFilter === 'failed' && !(evt.eventid || '').includes('login.failed')) return false;
+          if (eventIdFilter === 'success' && !(evt.eventid || '').includes('login.success')) return false;
+          if (eventIdFilter === 'command' && !(evt.eventid || '').includes('command') && !evt.input) return false;
+        }
+
         if (searchQuery.trim() !== '') {
           const q = searchQuery.toLowerCase();
           const matches =
-            evt.sourceIp.toLowerCase().includes(q) ||
-            evt.destinationService.toLowerCase().includes(q) ||
-            evt.attackType.toLowerCase().includes(q) ||
-            (evt.usernameAttempted && evt.usernameAttempted.toLowerCase().includes(q)) ||
-            evt.eventDetails.toLowerCase().includes(q);
+            (evt.timestamp || '').toLowerCase().includes(q) ||
+            (evt.src_ip || evt.sourceIp || '').toLowerCase().includes(q) ||
+            (evt.eventid || '').toLowerCase().includes(q) ||
+            (evt.username || '').toLowerCase().includes(q) ||
+            (evt.password || '').toLowerCase().includes(q) ||
+            (evt.input || '').toLowerCase().includes(q);
           if (!matches) return false;
         }
         return true;
       })
       .sort((a, b) => {
-        let valA = a[sortField];
-        let valB = b[sortField];
-        if (sortField === 'riskScore') {
-          return sortAsc ? valA - valB : valB - valA;
-        }
-        if (typeof valA === 'string') {
+        const valA = (a[sortField] || a.timestamp || '');
+        const valB = (b[sortField] || b.timestamp || '');
+        if (typeof valA === 'string' && typeof valB === 'string') {
           return sortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
         }
         return 0;
       });
-  }, [events, severityFilter, attackTypeFilter, searchQuery, sortField, sortAsc]);
+  }, [events, eventIdFilter, searchQuery, sortField, sortAsc]);
+
+  // Keep activeSession synced if not set or invalidated
+  const currentActive = activeSession || filteredEvents[0] || null;
 
   // Pagination
   const totalPages = Math.ceil(filteredEvents.length / itemsPerPage) || 1;
@@ -98,82 +99,85 @@ export default function LiveAttacksPage() {
   return (
     <div className="flex-1 flex flex-col min-h-screen">
       <Header
-        title="Live Decoy Attack Ingestion Stream"
-        subtitle="Real-time event capture across Cowrie SSH, Web honeypot, and Database services"
+        title="Live Attacks Monitor"
+        subtitle="Live Cowrie honeypot stream: real-time telemetry from http://localhost:3001/cowrie.json"
       />
 
       <div className="p-6 space-y-6">
-        {/* Stream Control & Demo Simulator Bar */}
-        <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 backdrop-blur-sm flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div
-              className={`p-2.5 rounded-lg border ${
-                isDemoStreaming
-                  ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400'
-                  : 'border-slate-800 bg-slate-800/60 text-slate-400'
-              }`}
-            >
-              <Radio
-                className={`h-5 w-5 ${isDemoStreaming ? 'animate-pulse text-emerald-400' : ''}`}
-              />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-slate-200 text-sm">
-                  Simulated Event Generator (Demo Mode)
-                </span>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-                  RFC 5737 RESERVED SUBNETS
+        {/* Metric Summary Counters */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Total Events */}
+          <div className="rounded-xl border border-blue-500/30 bg-slate-900/60 p-4 backdrop-blur-sm relative overflow-hidden">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-xs text-slate-400 font-mono uppercase tracking-wider block">Total Events</span>
+                <span className="text-2xl font-bold font-mono text-blue-400 mt-1 block">
+                  {(totalEvents || events.length).toLocaleString()}
                 </span>
               </div>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Simulates real-time inbound Kali Linux reconnaissance without generating actual network packets.
-              </p>
+              <div className="h-10 w-10 rounded-lg bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400">
+                <Activity className="h-5 w-5" />
+              </div>
             </div>
+            <p className="text-[11px] text-slate-400 mt-2 font-mono">Streamed from /logs/cowrie.json</p>
           </div>
 
-          <div className="flex items-center gap-3 w-full sm:w-auto">
-            <div className="flex items-center gap-2 text-xs font-mono text-slate-400">
-              <span>Speed:</span>
-              <select
-                value={streamSpeed}
-                onChange={(e) => setStreamSpeed(Number(e.target.value))}
-                className="bg-slate-950 border border-slate-800 rounded px-2 py-1 text-slate-200 text-xs focus:outline-none focus:border-slate-700"
-              >
-                <option value={2000}>2s (Fast)</option>
-                <option value={4000}>4s (Normal)</option>
-                <option value={7000}>7s (Slow)</option>
-              </select>
+          {/* Failed Logins */}
+          <div className="rounded-xl border border-red-500/30 bg-slate-900/60 p-4 backdrop-blur-sm relative overflow-hidden">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-xs text-slate-400 font-mono uppercase tracking-wider block">Failed Logins</span>
+                <span className="text-2xl font-bold font-mono text-red-400 mt-1 block">
+                  {failedLogins.toLocaleString()}
+                </span>
+              </div>
+              <div className="h-10 w-10 rounded-lg bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-400">
+                <UserX className="h-5 w-5" />
+              </div>
             </div>
+            <p className="text-[11px] text-slate-400 mt-2 font-mono">Brute force & auth rejections</p>
+          </div>
 
-            <button
-              onClick={() => setIsDemoStreaming(!isDemoStreaming)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all shadow-sm ${
-                isDemoStreaming
-                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30'
-                  : 'bg-emerald-500 text-slate-950 hover:bg-emerald-400'
-              }`}
-            >
-              {isDemoStreaming ? (
-                <>
-                  <Square className="h-3.5 w-3.5 fill-current" /> Stop Generator
-                </>
-              ) : (
-                <>
-                  <Play className="h-3.5 w-3.5 fill-current" /> Start Generator
-                </>
-              )}
-            </button>
+          {/* Successful Logins */}
+          <div className="rounded-xl border border-amber-500/30 bg-slate-900/60 p-4 backdrop-blur-sm relative overflow-hidden">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-xs text-slate-400 font-mono uppercase tracking-wider block">Successful Logins</span>
+                <span className="text-2xl font-bold font-mono text-amber-400 mt-1 block">
+                  {successfulLogins.toLocaleString()}
+                </span>
+              </div>
+              <div className="h-10 w-10 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                <ShieldAlert className="h-5 w-5" />
+              </div>
+            </div>
+            <p className="text-[11px] text-slate-400 mt-2 font-mono">Decoy shell sessions opened</p>
+          </div>
+
+          {/* Unique Attacker IPs */}
+          <div className="rounded-xl border border-purple-500/30 bg-slate-900/60 p-4 backdrop-blur-sm relative overflow-hidden">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-xs text-slate-400 font-mono uppercase tracking-wider block">Unique Attacker IPs</span>
+                <span className="text-2xl font-bold font-mono text-purple-400 mt-1 block">
+                  {uniqueAttackers.toLocaleString()}
+                </span>
+              </div>
+              <div className="h-10 w-10 rounded-lg bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400">
+                <Users className="h-5 w-5" />
+              </div>
+            </div>
+            <p className="text-[11px] text-slate-400 mt-2 font-mono">Distinct ingress sources</p>
           </div>
         </div>
 
-        {/* Filter & Search Bar */}
+        {/* Search & Filter Bar */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
-          <div className="md:col-span-5 relative">
+          <div className="md:col-span-8 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
             <input
               type="text"
-              placeholder="Search IP, vector, honeypot, username, or payload details..."
+              placeholder="Search by timestamp, src_ip, eventid, username, password, or input..."
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
@@ -191,57 +195,47 @@ export default function LiveAttacksPage() {
             )}
           </div>
 
-          <div className="md:col-span-3">
-            <div className="flex items-center gap-2 bg-slate-900/80 border border-slate-800 rounded-lg px-3 py-1.5">
-              <SlidersHorizontal className="h-3.5 w-3.5 text-slate-400" />
-              <span className="text-[11px] text-slate-400">Severity:</span>
-              <select
-                value={severityFilter}
-                onChange={(e) => {
-                  setSeverityFilter(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="bg-transparent text-xs text-slate-200 focus:outline-none flex-1 font-mono"
-              >
-                <option value="All" className="bg-slate-900">All Levels</option>
-                <option value="Critical" className="bg-slate-900 text-red-400">Critical (80-100)</option>
-                <option value="High" className="bg-slate-900 text-orange-400">High (60-79)</option>
-                <option value="Medium" className="bg-slate-900 text-amber-400">Medium (40-59)</option>
-                <option value="Low" className="bg-slate-900 text-emerald-400">Low (0-39)</option>
-              </select>
-            </div>
-          </div>
-
           <div className="md:col-span-4">
             <div className="flex items-center gap-2 bg-slate-900/80 border border-slate-800 rounded-lg px-3 py-1.5">
               <Filter className="h-3.5 w-3.5 text-slate-400" />
-              <span className="text-[11px] text-slate-400">Vector:</span>
+              <span className="text-[11px] text-slate-400">Type:</span>
               <select
-                value={attackTypeFilter}
+                value={eventIdFilter}
                 onChange={(e) => {
-                  setAttackTypeFilter(e.target.value);
+                  setEventIdFilter(e.target.value);
                   setCurrentPage(1);
                 }}
                 className="bg-transparent text-xs text-slate-200 focus:outline-none flex-1 truncate font-mono"
               >
-                {attackTypes.map((type) => (
-                  <option key={type} value={type} className="bg-slate-900">
-                    {type}
-                  </option>
-                ))}
+                <option value="All" className="bg-slate-900">All Events</option>
+                <option value="failed" className="bg-slate-900 text-red-400">Failed Logins</option>
+                <option value="success" className="bg-slate-900 text-amber-400">Successful Logins</option>
+                <option value="command" className="bg-slate-900 text-emerald-400">Commands / Input</option>
               </select>
             </div>
           </div>
         </div>
 
-        {/* Live Attack Events Table */}
+        {/* Live Attacks Table */}
         <div className="rounded-xl border border-slate-800 bg-slate-900/50 backdrop-blur-sm overflow-hidden">
+          <div className="p-3 border-b border-slate-800 flex items-center justify-between bg-slate-950/40">
+            <div className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+              <h2 className="text-xs font-bold text-slate-200 uppercase tracking-wider font-mono">
+                Live Attacks Feed (Newest First)
+              </h2>
+            </div>
+            <span className="text-[11px] font-mono text-slate-400">
+              Auto-refreshing every 3s
+            </span>
+          </div>
+
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-950/70 text-slate-400 font-mono uppercase text-[10px] border-b border-slate-800">
                 <tr>
                   <th
-                    className="py-3 px-4 cursor-pointer hover:text-slate-200"
+                    className="py-3 px-4 cursor-pointer hover:text-slate-200 whitespace-nowrap"
                     onClick={() => {
                       setSortField('timestamp');
                       setSortAsc(!sortAsc);
@@ -251,42 +245,34 @@ export default function LiveAttacksPage() {
                       Timestamp <ArrowUpDown className="h-3 w-3" />
                     </span>
                   </th>
-                  <th className="py-3 px-4">Source IP</th>
-                  <th className="py-3 px-4">Decoy Target</th>
-                  <th className="py-3 px-4">Vector</th>
-                  <th className="py-3 px-4">Payload / Auth Attempt</th>
-                  <th className="py-3 px-4">Severity</th>
-                  <th
-                    className="py-3 px-4 cursor-pointer hover:text-slate-200"
-                    onClick={() => {
-                      setSortField('riskScore');
-                      setSortAsc(!sortAsc);
-                    }}
-                  >
-                    <span className="flex items-center gap-1">
-                      Risk Score <ArrowUpDown className="h-3 w-3" />
-                    </span>
-                  </th>
-                  <th className="py-3 px-4 text-right">Triage</th>
+                  <th className="py-3 px-4 whitespace-nowrap">src_ip</th>
+                  <th className="py-3 px-4 whitespace-nowrap">eventid</th>
+                  <th className="py-3 px-4 whitespace-nowrap">username</th>
+                  <th className="py-3 px-4 whitespace-nowrap">password</th>
+                  <th className="py-3 px-4 whitespace-nowrap">input</th>
+                  <th className="py-3 px-4 text-right whitespace-nowrap">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60 font-mono">
                 {paginatedEvents.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-12 text-center text-slate-500">
-                      No matching attack events found. Try adjusting filters or starting the demo generator.
+                    <td colSpan={7} className="py-12 text-center text-slate-500">
+                      {events.length === 0
+                        ? 'Waiting for incoming Cowrie logs from http://localhost:3001/cowrie.json...'
+                        : 'No events match the selected filters.'}
                     </td>
                   </tr>
                 ) : (
-                  paginatedEvents.map((evt) => {
-                    const isCrit = evt.severity === 'Critical';
-                    const isHigh = evt.severity === 'High';
-                    const isMed = evt.severity === 'Medium';
-                    const isSelected = activeSession?.id === evt.id;
+                  paginatedEvents.map((evt, idx) => {
+                    const eid = evt.eventid || '';
+                    const isFailed = eid.includes('login.failed') || eid.includes('auth.failed');
+                    const isSuccess = eid.includes('login.success') || eid.includes('auth.success');
+                    const isCommand = eid.includes('command') || Boolean(evt.input);
+                    const isSelected = currentActive?.id === evt.id;
 
                     return (
                       <tr
-                        key={evt.id}
+                        key={evt.id || idx}
                         onClick={() => handleRowClick(evt)}
                         className={`transition-colors cursor-pointer ${
                           isSelected
@@ -294,41 +280,65 @@ export default function LiveAttacksPage() {
                             : 'hover:bg-slate-800/40'
                         }`}
                       >
+                        {/* timestamp */}
                         <td className="py-3 px-4 text-slate-400 whitespace-nowrap">
-                          {evt.timestamp}
+                          {evt.timestamp || 'N/A'}
                         </td>
+
+                        {/* src_ip */}
                         <td className="py-3 px-4 text-emerald-400 font-medium whitespace-nowrap">
-                          {evt.sourceIp}
+                          {evt.src_ip || evt.sourceIp || '127.0.0.1'}
                         </td>
-                        <td className="py-3 px-4 text-slate-300 whitespace-nowrap">
-                          {evt.destinationService}
-                        </td>
-                        <td className="py-3 px-4 text-slate-200 whitespace-nowrap font-medium">
-                          {evt.attackType}
-                        </td>
-                        <td className="py-3 px-4 text-slate-400 max-w-[220px] truncate" title={evt.usernameAttempted || evt.eventDetails}>
-                          {evt.usernameAttempted && evt.usernameAttempted !== 'N/A'
-                            ? evt.usernameAttempted
-                            : evt.eventDetails}
-                        </td>
+
+                        {/* eventid */}
                         <td className="py-3 px-4 whitespace-nowrap">
                           <span
                             className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold ${
-                              isCrit
+                              isCommand
+                                ? 'bg-purple-500/10 text-purple-300 border border-purple-500/30'
+                                : isFailed
                                 ? 'bg-red-500/10 text-red-400 border border-red-500/30'
-                                : isHigh
-                                ? 'bg-orange-500/10 text-orange-400 border border-orange-500/30'
-                                : isMed
-                                ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
-                                : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                                : isSuccess
+                                ? 'bg-amber-500/10 text-amber-300 border border-amber-500/30'
+                                : 'bg-slate-800 text-slate-300 border border-slate-700'
                             }`}
                           >
-                            {evt.severity}
+                            {evt.eventid || 'cowrie.event'}
                           </span>
                         </td>
-                        <td className="py-3 px-4 font-bold text-slate-100 whitespace-nowrap">
-                          {evt.riskScore}
+
+                        {/* username */}
+                        <td className="py-3 px-4 text-slate-200 whitespace-nowrap font-medium">
+                          {evt.username ? (
+                            <span className="text-slate-200">{evt.username}</span>
+                          ) : (
+                            <span className="text-slate-500">-</span>
+                          )}
                         </td>
+
+                        {/* password */}
+                        <td className="py-3 px-4 text-slate-300 whitespace-nowrap">
+                          {evt.password ? (
+                            <span className="px-1.5 py-0.5 rounded bg-slate-950 text-slate-300 border border-slate-800 text-[11px]">
+                              {evt.password}
+                            </span>
+                          ) : (
+                            <span className="text-slate-500">-</span>
+                          )}
+                        </td>
+
+                        {/* input */}
+                        <td className="py-3 px-4 max-w-[260px] truncate" title={evt.input || ''}>
+                          {evt.input ? (
+                            <span className="text-amber-300 font-medium bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
+                              {evt.input}
+                            </span>
+                          ) : (
+                            <span className="text-slate-500">-</span>
+                          )}
+                        </td>
+
+                        {/* action */}
                         <td className="py-3 px-4 text-right whitespace-nowrap">
                           <button
                             onClick={(e) => {
@@ -337,7 +347,7 @@ export default function LiveAttacksPage() {
                             }}
                             className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-sans font-medium transition-colors"
                           >
-                            Analyze
+                            Inspect
                           </button>
                         </td>
                       </tr>

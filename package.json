@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "server": "node server/index.js"
   },
   "keywords": [],
   "author": "",
@@ -19,7 +20,10 @@
     "vite": "^6.4.4"
   },
   "dependencies": {
+    "better-sqlite3": "^11.8.1",
     "clsx": "^2.1.1",
+    "cors": "^2.8.6",
+    "express": "^5.3.0",
     "lucide-react": "^1.60.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
