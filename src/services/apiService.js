@@ -197,45 +197,47 @@ class ApiService {
   }
 }
 
-/**
- * Fetch Cowrie logs from /logs/cowrie.json (proxied to http://localhost:3001/cowrie.json),
- * parse lines safely (skipping invalid/malformed lines), and extract the required fields:
- * eventid, src_ip, username, password, input, timestamp.
- */
-export async function fetchCowrieLogs() {
-  const response = await fetch('/logs/cowrie.json', {
+export async function fetchBackendEvents(params = {}) {
+  const query = new URLSearchParams(params);
+  const res = await fetch(`/api/events?${query}`, {
     headers: { 'Cache-Control': 'no-cache' }
   });
-  if (!response.ok) {
-    throw new Error(`Failed to fetch cowrie logs: ${response.status} ${response.statusText}`);
+  if (!res.ok) {
+    throw new Error(`Failed to fetch backend events: ${res.status}`);
   }
+  return await res.json();
+}
 
-  const text = await response.text();
-  const lines = text.split(/\r?\n/);
-  const events = [];
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
-    try {
-      const obj = JSON.parse(trimmed);
-      if (obj && typeof obj === 'object') {
-        events.push({
-          eventid: obj.eventid || '',
-          src_ip: obj.src_ip || '',
-          username: obj.username || '',
-          password: obj.password || '',
-          input: obj.input || '',
-          timestamp: obj.timestamp || ''
-        });
-      }
-    } catch {
-      // Skip bad lines safely
-    }
+export async function fetchBackendSessions(limit = 100) {
+  const res = await fetch(`/api/sessions?limit=${limit}`, {
+    headers: { 'Cache-Control': 'no-cache' }
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch backend sessions: ${res.status}`);
   }
+  return await res.json();
+}
 
-  return events;
+export async function fetchBackendStats() {
+  const res = await fetch('/api/stats', {
+    headers: { 'Cache-Control': 'no-cache' }
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch backend stats: ${res.status}`);
+  }
+  return await res.json();
+}
+
+export async function fetchBackendThreats() {
+  const res = await fetch('/api/threats', {
+    headers: { 'Cache-Control': 'no-cache' }
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch backend threats: ${res.status}`);
+  }
+  return await res.json();
 }
 
 export const apiService = new ApiService();
+
 

@@ -22,7 +22,7 @@ export default function Header({ title, subtitle }) {
         <h1 className="text-base font-bold text-slate-100 tracking-tight flex items-center gap-2">
           {title}
           <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-            LIVE HONEYPOT (Cowrie)
+            HONEYNET (Cowrie &bull; Heralding &bull; Suricata)
           </span>
         </h1>
         {subtitle && (
@@ -49,20 +49,10 @@ export default function Header({ title, subtitle }) {
           <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
         </div>
 
-        {/* Live Stream Pill */}
-        <div
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-mono font-medium ${
-            isDemoStreaming
-              ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
-              : 'border-slate-800 bg-slate-950/50 text-slate-400'
-          }`}
-        >
-          <span
-            className={`h-2 w-2 rounded-full ${
-              isDemoStreaming ? 'bg-emerald-400 animate-ping' : 'bg-slate-600'
-            }`}
-          />
-          <span>{isDemoStreaming ? 'SIMULATION ACTIVE' : 'SIMULATION IDLE'}</span>
+        {/* Multi-Honeypot Live Ingestion */}
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-emerald-500/30 bg-emerald-950/30 text-xs font-mono font-medium text-emerald-300">
+          <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span>LIVE INGESTION ACTIVE</span>
         </div>
 
         {/* Alert Notifications */}

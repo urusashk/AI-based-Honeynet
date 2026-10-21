@@ -73,71 +73,7 @@ export default function Sidebar() {
         </button>
       </div>
 
-      {/* Demo Simulation Bar */}
-      <div className="px-3 pt-4 pb-2">
-        <div
-          className={`rounded-xl border p-2.5 transition-all ${
-            isDemoStreaming
-              ? 'border-emerald-500/40 bg-emerald-950/20 shadow-sm shadow-emerald-900/20'
-              : 'border-slate-800 bg-slate-950/40'
-          }`}
-        >
-          {!collapsed ? (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className="flex items-center gap-1.5 font-medium text-slate-300">
-                  <Radio
-                    className={`h-3.5 w-3.5 ${
-                      isDemoStreaming ? 'text-emerald-400 animate-ping' : 'text-slate-500'
-                    }`}
-                  />
-                  Live Stream Simulator
-                </span>
-                <span
-                  className={`text-[10px] font-mono px-1.5 py-0.5 rounded font-semibold ${
-                    isDemoStreaming
-                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                      : 'bg-slate-800 text-slate-400'
-                  }`}
-                >
-                  {isDemoStreaming ? 'STREAMING' : 'PAUSED'}
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-400 leading-tight">
-                Emulates Kali Linux attacks & Cowrie log ingestion.
-              </p>
-              <button
-                onClick={() => setIsDemoStreaming(!isDemoStreaming)}
-                className={`w-full flex items-center justify-center gap-2 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all shadow-sm ${
-                  isDemoStreaming
-                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30'
-                    : 'bg-emerald-500 text-slate-950 font-bold hover:bg-emerald-400'
-                }`}
-              >
-                {isDemoStreaming ? (
-                  <>
-                    <Square className="h-3 w-3 fill-current" /> Pause Demo Stream
-                  </>
-                ) : (
-                  <>
-                    <Play className="h-3 w-3 fill-current" /> Start Demo Stream
-                  </>
-                )}
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setIsDemoStreaming(!isDemoStreaming)}
-              className={`flex h-9 w-full items-center justify-center rounded-lg ${
-                isDemoStreaming ? 'bg-amber-500/20 text-amber-300' : 'bg-emerald-500 text-slate-950'
-              }`}
-              title={isDemoStreaming ? 'Pause Demo Stream' : 'Start Demo Stream'}
-            >
-              {isDemoStreaming ? <Square className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-            </button>
-          )}
-        </div>
-      </div>
+
 
       {/* Navigation Items */}
       <nav className="flex-1 space-y-1 px-3 py-3 overflow-y-auto">
